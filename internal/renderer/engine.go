@@ -4,7 +4,6 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/sirupsen/logrus"
 	log "github.com/yuhrao/flappy-gopher/internal"
 )
@@ -16,8 +15,8 @@ const (
 )
 
 var (
-	wallChar = '█'
-	bgChar   = '▒'
+	wallChar = "█"
+	bgChar   = " "
 )
 
 type Engine struct {
@@ -40,9 +39,11 @@ func NewEngine(wSize [2]int) *Engine {
 }
 
 func (e *Engine) initialize() {
+	e.mux.Lock()
 	for i := 0; i < maxObstaclesCount; i++ {
 		e.AddObstacle()
 	}
+	e.mux.Unlock()
 }
 
 func (e *Engine) AddObstacle() {
@@ -68,7 +69,7 @@ func (e *Engine) AddObstacle() {
 	e.Obstacles = append(e.Obstacles, newObstacle)
 }
 
-func (e *Engine) Move() {
+func (e *Engine) MoveObstacles() {
 	e.mux.Lock()
 
 	logFields := logrus.Fields{}
@@ -91,6 +92,18 @@ func (e *Engine) Move() {
 	e.mux.Unlock()
 }
 
+func (e *Engine) ApplyGravity() {
+	e.mux.Lock()
+	e.BirdHeight += 1
+	e.mux.Unlock()
+}
+
+func (e *Engine) Jump() {
+	e.mux.Lock()
+	e.BirdHeight -= 1
+	e.mux.Unlock()
+}
+
 func (e *Engine) isObstacle(x, y int) bool {
 	for _, o := range e.Obstacles {
 		if o.IntersectingY(y) && o.IntersectingX(x) {
@@ -100,30 +113,18 @@ func (e *Engine) isObstacle(x, y int) bool {
 	return false
 }
 
-func (e *Engine) getRune(px, py int) rune {
+func (e *Engine) getRune(px, py int) string {
 
 	if e.isObstacle(px, py) {
 		return wallChar
 	}
 
 	if py == e.BirdHeight && px == gopherPosX {
-		return 'G'
+		return "G"
 	}
 
 	return bgChar
 
-}
-
-func (e *Engine) createCanvas() [][]rune {
-	canvas := make([][]rune, e.WindowSize[1])
-	for py, x := range canvas {
-		x = make([]rune, e.WindowSize[0])
-		for px := range x {
-			x[px] = e.getRune(px, py)
-		}
-		canvas[py] = x
-	}
-	return canvas
 }
 
 func (e *Engine) Render() string {
@@ -131,17 +132,11 @@ func (e *Engine) Render() string {
 	defer e.mux.Unlock()
 
 	s := ""
-	for _, row := range e.createCanvas() {
-		for _, cell := range row {
-			var style lipgloss.Style
-			if cell == wallChar {
-				style = lipgloss.NewStyle().Foreground(lipgloss.Color("#FF9580")).Background(lipgloss.Color("#FF9580"))
-			} else if bgChar == cell {
-				style = lipgloss.NewStyle().Foreground(lipgloss.Color("#414D58"))
-			} else {
-				style = lipgloss.NewStyle().Foreground(lipgloss.Color("#FFFFFF")).Background(lipgloss.Color("#414D58"))
-			}
-			s += style.Render(string(cell))
+	canvas := make([][]rune, e.WindowSize[1])
+	for y := range canvas {
+		row := make([]rune, e.WindowSize[0])
+		for x := range row {
+			s += e.getRune(x, y)
 		}
 		s += "\n"
 	}

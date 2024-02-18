@@ -16,22 +16,26 @@ func initialModel() model {
 	wSize := [2]int{130, 50}
 
 	return model{
-		// A map which indicates which choices are selected. We're using
-		// the  map like a mathematical set. The keys refer to the indexes
-		// of the `choices` slice, above.
 		engine: renderer.NewEngine(wSize),
 	}
 }
 
-func gameCommands() tea.Cmd {
-	return tea.Tick(10 * time.Millisecond, func(time.Time) tea.Msg {
-		return renderer.MoveMsg
-	})
+
+func movementCmd() tea.Cmd {
+  return tea.Tick(500 * time.Millisecond, func(time.Time) tea.Msg {
+    return renderer.MoveMsg
+  })
+}
+
+func gravityCmd() tea.Cmd {
+  return tea.Tick(500 * time.Millisecond, func(time.Time) tea.Msg {
+    return renderer.GravityMsg
+  })
 }
 
 func (m model) Init() tea.Cmd {
 	// Just return `nil`, which means "no I/O right now, please."
-	return gameCommands()
+	return tea.Batch(movementCmd(), gravityCmd())
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -43,32 +47,32 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Cool, what was the actual key pressed?
 		switch msg.String() {
 
-		// These keys should exit the program.
-		case "ctrl+c", "q":
-			return m, tea.Quit
-		}
+    // These keys should exit the program.
+    case "ctrl+c", "q":
+      return m, tea.Quit
+
+    case " ":
+      m.engine.Jump()
+    }
 
 	case renderer.EngineMessage:
 		switch msg {
 		case renderer.MoveMsg:
-      m.engine.Move()
-      return m, gameCommands()
+      m.engine.MoveObstacles()
+      return m, movementCmd()
+
+    case renderer.GravityMsg:
+      m.engine.ApplyGravity()
+      return m, gravityCmd()
+
 		}
 
 	}
 
-	// Return the updated model to the Bubble Tea runtime for processing.
-	// Note that we're not returning a command.
 	return m, nil
 }
 
 func (m model) View() string {
-  // var s string
-  // for _, o := range m.engine.Obstacles {
-  //   s += fmt.Sprint(*o)
-  // }
-  // return s
-
 	return m.engine.Render()
 }
 
