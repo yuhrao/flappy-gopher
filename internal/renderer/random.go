@@ -2,6 +2,10 @@ package renderer
 
 import "math/rand/v2"
 
+const seed = 100000
+
 func randomIntBetween(min, max int) int {
-  return min + rand.IntN(max-min)
+  mn := min * seed
+  mx := max * seed
+  return int((rand.IntN(mx - mn) + mn )/ seed)
 }

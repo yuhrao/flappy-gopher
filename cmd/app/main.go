@@ -13,7 +13,7 @@ type model struct {
 }
 
 func initialModel() model {
-	wSize := [2]int{100, 30}
+	wSize := [2]int{130, 50}
 
 	return model{
 		// A map which indicates which choices are selected. We're using
@@ -24,7 +24,7 @@ func initialModel() model {
 }
 
 func gameCommands() tea.Cmd {
-	return tea.Tick(100 * time.Millisecond, func(time.Time) tea.Msg {
+	return tea.Tick(10 * time.Millisecond, func(time.Time) tea.Msg {
 		return renderer.MoveMsg
 	})
 }

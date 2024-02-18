@@ -9,8 +9,9 @@ type Obstacle struct {
 }
 
 func NewObstacle(px, gap, height, width int) *Obstacle {
-	top := int(gap / 2)
-	bottom := height + top
+  halfGap := int(gap / 2)
+	top := height - halfGap
+	bottom := height + halfGap
 	return &Obstacle{top, bottom, px, gap, width}
 }
 

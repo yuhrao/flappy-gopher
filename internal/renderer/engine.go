@@ -1,12 +1,18 @@
 package renderer
 
-import "github.com/charmbracelet/lipgloss"
-// import "math/rand/v2"
+import (
+	"strconv"
+	"sync"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/sirupsen/logrus"
+	log "github.com/yuhrao/flappy-gopher/internal"
+)
 
 const (
 	gopherPosX        = 10
 	maxObstacleWidth  = 5
-	maxObstaclesCount = 5
+	maxObstaclesCount = 10
 )
 
 var (
@@ -18,13 +24,15 @@ type Engine struct {
 	WindowSize [2]int
 	BirdHeight int
 	Obstacles  []*Obstacle
+	mux        sync.Mutex
 }
 
 // New Engine
 func NewEngine(wSize [2]int) *Engine {
 	birdHeight := int(wSize[1] / 2)
 	obstacles := make([]*Obstacle, 0)
-	eng := &Engine{wSize, birdHeight, obstacles}
+	mux := sync.Mutex{}
+	eng := &Engine{wSize, birdHeight, obstacles, mux}
 
 	eng.initialize()
 
@@ -42,15 +50,18 @@ func (e *Engine) AddObstacle() {
 		return
 	}
 	width := randomIntBetween(1, maxObstacleWidth)
-	gap := randomIntBetween(2, 4)
+	gap := randomIntBetween(4, 10)
 	quarterHeight, halfHeight := int(e.WindowSize[1]/4), int(e.WindowSize[1]/2)
 	height := randomIntBetween(quarterHeight, halfHeight+quarterHeight)
-	px := e.WindowSize[0]
+	var px int
+	obstacleCount := len(e.Obstacles)
 
-	if len(e.Obstacles) > 0 {
+	if obstacleCount > 0 {
 		lastObstacle := e.Obstacles[len(e.Obstacles)-1]
-		distanceBetweenObstacles := randomIntBetween(1, 10)
+		distanceBetweenObstacles := randomIntBetween(8, 30)
 		px = lastObstacle.px + lastObstacle.width + distanceBetweenObstacles
+	} else {
+		px = e.WindowSize[0]
 	}
 
 	newObstacle := NewObstacle(px, gap, height, width)
@@ -58,12 +69,27 @@ func (e *Engine) AddObstacle() {
 }
 
 func (e *Engine) Move() {
-  for i, o := range e.Obstacles {
-    o.Move(e.WindowSize[0])
-    e.Obstacles[i] = o
-  }
-}
+	e.mux.Lock()
 
+	logFields := logrus.Fields{}
+
+	for i, o := range e.Obstacles {
+		logFields[strconv.Itoa(i)] = o.px
+
+		o.Move(e.WindowSize[0])
+		e.Obstacles[i] = o
+	}
+
+	log.Logger.WithFields(logFields).Info("Moving obstacle")
+
+	firstObstacle := e.Obstacles[0]
+	if firstObstacle.px < -firstObstacle.width {
+		e.Obstacles = e.Obstacles[1:]
+		e.AddObstacle()
+	}
+
+	e.mux.Unlock()
+}
 
 func (e *Engine) isObstacle(x, y int) bool {
 	for _, o := range e.Obstacles {
@@ -101,6 +127,9 @@ func (e *Engine) createCanvas() [][]rune {
 }
 
 func (e *Engine) Render() string {
+	e.mux.Lock()
+	defer e.mux.Unlock()
+
 	s := ""
 	for _, row := range e.createCanvas() {
 		for _, cell := range row {
