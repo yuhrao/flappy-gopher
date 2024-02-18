@@ -2,37 +2,36 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/yuhrao/flappy-gopher/internal/renderer"
 )
 
 type model struct {
-	engine renderer.RenderEngine
+	engine *renderer.Engine
 }
 
 func initialModel() model {
 	wSize := [2]int{100, 30}
-	obstacles := []renderer.Obstacle{
-		renderer.NewObstacle(19, 4, 15),
-		renderer.NewObstacle(39, 2, 10),
-	}
 
 	return model{
 		// A map which indicates which choices are selected. We're using
 		// the  map like a mathematical set. The keys refer to the indexes
 		// of the `choices` slice, above.
-		engine: renderer.RenderEngine{
-			WindowSize: wSize,
-			BirdHeight: 12,
-			Obstacles:  obstacles,
-		},
+		engine: renderer.NewEngine(wSize),
 	}
+}
+
+func gameCommands() tea.Cmd {
+	return tea.Tick(100 * time.Millisecond, func(time.Time) tea.Msg {
+		return renderer.MoveMsg
+	})
 }
 
 func (m model) Init() tea.Cmd {
 	// Just return `nil`, which means "no I/O right now, please."
-	return nil
+	return gameCommands()
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -49,6 +48,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 
+	case renderer.EngineMessage:
+		switch msg {
+		case renderer.MoveMsg:
+      m.engine.Move()
+      return m, gameCommands()
+		}
+
 	}
 
 	// Return the updated model to the Bubble Tea runtime for processing.
@@ -57,15 +63,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	// TODO: Check if we should re-render the view if nothing has changed
+  // var s string
+  // for _, o := range m.engine.Obstacles {
+  //   s += fmt.Sprint(*o)
+  // }
+  // return s
 
 	return m.engine.Render()
 }
 
 func main() {
 
-	fmt.Println("Initialising...")
-	p := tea.NewProgram(initialModel())
+	p := tea.NewProgram(initialModel(), tea.WithAltScreen(), tea.WithFPS(120))
 
 	if _, err := p.Run(); err != nil {
 

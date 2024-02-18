@@ -1,21 +1,27 @@
-package renderer;
+package renderer
 
 type Obstacle struct {
-	topPos    [2]int
-	bottomPos [2]int
-	gap       int
+	top    int
+	bottom int
+	px     int
+	width  int
+	gap    int
 }
 
-func NewObstacle(px, gap, height int) Obstacle {
-	topPos := [2]int{px, height - int(gap/2)}
-	bottomPos := [2]int{px, height + int(gap/2)}
-	return Obstacle{topPos, bottomPos, gap}
+func NewObstacle(px, gap, height, width int) *Obstacle {
+	top := int(gap / 2)
+	bottom := height + top
+	return &Obstacle{top, bottom, px, gap, width}
 }
 
-func (o Obstacle) IntersectingY(y int) bool {
-	return y <= o.topPos[1] || y >= o.bottomPos[1]
+func (o *Obstacle) IntersectingY(y int) bool {
+	return y <= o.top || y >= o.bottom
 }
 
-func (o Obstacle) IntersectingX(x int) bool {
-	return x <= o.topPos[0]+obstacleWidth && x >= o.topPos[0]
+func (o *Obstacle) IntersectingX(x int) bool {
+	return x <= o.px+o.width && x >= o.px
+}
+
+func (o *Obstacle) Move(length int) {
+  o.px = o.px - 1
 }
